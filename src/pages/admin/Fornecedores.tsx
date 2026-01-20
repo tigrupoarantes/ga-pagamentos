@@ -71,6 +71,70 @@ const detectTipoPessoa = (documento: string): 'pf' | 'pj' => {
   return numbers.length <= 11 ? 'pf' : 'pj';
 };
 
+const validarCPF = (cpf: string): boolean => {
+  const numbers = cpf.replace(/\D/g, '');
+  
+  if (numbers.length !== 11) return false;
+  
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(numbers)) return false;
+  
+  // Calcula primeiro dígito verificador
+  let soma = 0;
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(numbers[i]) * (10 - i);
+  }
+  let resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(numbers[9])) return false;
+  
+  // Calcula segundo dígito verificador
+  soma = 0;
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(numbers[i]) * (11 - i);
+  }
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(numbers[10])) return false;
+  
+  return true;
+};
+
+const validarCNPJ = (cnpj: string): boolean => {
+  const numbers = cnpj.replace(/\D/g, '');
+  
+  if (numbers.length !== 14) return false;
+  
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(numbers)) return false;
+  
+  // Calcula primeiro dígito verificador
+  const pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let soma = 0;
+  for (let i = 0; i < 12; i++) {
+    soma += parseInt(numbers[i]) * pesos1[i];
+  }
+  let resto = soma % 11;
+  const digito1 = resto < 2 ? 0 : 11 - resto;
+  if (digito1 !== parseInt(numbers[12])) return false;
+  
+  // Calcula segundo dígito verificador
+  const pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  soma = 0;
+  for (let i = 0; i < 13; i++) {
+    soma += parseInt(numbers[i]) * pesos2[i];
+  }
+  resto = soma % 11;
+  const digito2 = resto < 2 ? 0 : 11 - resto;
+  if (digito2 !== parseInt(numbers[13])) return false;
+  
+  return true;
+};
+
+const validarDocumento = (documento: string, tipoPessoa: 'pf' | 'pj'): boolean => {
+  return tipoPessoa === 'pf' ? validarCPF(documento) : validarCNPJ(documento);
+};
+
 export default function Fornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +192,18 @@ export default function Fornecedores() {
         description: formData.tipo_pessoa === 'pf' 
           ? 'CPF deve ter 11 dígitos' 
           : 'CNPJ deve ter 14 dígitos',
+        variant: 'destructive',
+      });
+      setSaving(false);
+      return;
+    }
+
+    if (!validarDocumento(documentoNumbers, formData.tipo_pessoa)) {
+      toast({
+        title: 'Erro',
+        description: formData.tipo_pessoa === 'pf' 
+          ? 'CPF inválido. Verifique os dígitos.' 
+          : 'CNPJ inválido. Verifique os dígitos.',
         variant: 'destructive',
       });
       setSaving(false);
