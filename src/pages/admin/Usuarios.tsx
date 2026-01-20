@@ -30,6 +30,8 @@ const roleLabels: Record<AppRole, string> = {
   gestor_centro_custo: 'Gestor CC',
   aprovador: 'Aprovador',
   visualizador: 'Visualizador',
+  gerente_financeiro: 'Gerente Financeiro',
+  diretor_financeiro: 'Diretor Financeiro',
 };
 
 const roleVariants: Record<AppRole, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -37,6 +39,8 @@ const roleVariants: Record<AppRole, 'default' | 'secondary' | 'destructive' | 'o
   gestor_centro_custo: 'default',
   aprovador: 'secondary',
   visualizador: 'outline',
+  gerente_financeiro: 'default',
+  diretor_financeiro: 'destructive',
 };
 
 export default function Usuarios() {
