@@ -45,11 +45,15 @@ export function DetalhesSolicitacaoDialog({
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(
-      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-      '$1.$2.$3/$4-$5'
-    );
+  const formatDocumento = (documento: string) => {
+    const numbers = documento.replace(/\D/g, '');
+    if (numbers.length === 11) {
+      // CPF
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else {
+      // CNPJ
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
   };
 
   return (
@@ -135,15 +139,15 @@ export function DetalhesSolicitacaoDialog({
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">CNPJ</p>
+                <p className="text-sm text-muted-foreground">CPF/CNPJ</p>
                 <p className="font-medium">
                   {solicitacao.fornecedor?.cnpj
-                    ? formatCNPJ(solicitacao.fornecedor.cnpj)
+                    ? formatDocumento(solicitacao.fornecedor.cnpj)
                     : 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Razão Social</p>
+                <p className="text-sm text-muted-foreground">Nome/Razão Social</p>
                 <p className="font-medium">{solicitacao.fornecedor?.razao_social || 'N/A'}</p>
               </div>
             </div>
