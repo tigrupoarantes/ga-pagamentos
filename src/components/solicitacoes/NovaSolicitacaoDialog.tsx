@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { UploadAnexos } from './UploadAnexos';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   centro_custo_id: z.string().min(1, 'Selecione um centro de custo'),
@@ -76,6 +78,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [arquivos, setArquivos] = useState<File[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -92,6 +95,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
     if (open) {
       fetchData();
       form.reset();
+      setArquivos([]);
     }
   }, [open]);
 
@@ -143,6 +147,39 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
     return cleaned;
   };
 
+  const uploadAnexos = async (solicitacaoId: string) => {
+    for (const arquivo of arquivos) {
+      try {
+        const path = `${solicitacaoId}/${Date.now()}_${arquivo.name}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('anexos-solicitacoes')
+          .upload(path, arquivo);
+
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('anexos-solicitacoes')
+          .getPublicUrl(path);
+
+        await (supabase.from('anexos_solicitacao') as any).insert({
+          solicitacao_id: solicitacaoId,
+          nome_arquivo: arquivo.name,
+          tipo_arquivo: arquivo.type,
+          tamanho_bytes: arquivo.size,
+          storage_path: path,
+          url_publica: urlData.publicUrl,
+          uploaded_by: user?.id,
+        });
+      } catch (error) {
+        console.error('Error processing attachment:', error);
+      }
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     if (!user) {
       toast({
@@ -157,7 +194,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
     try {
       const valorNumerico = parseValor(data.valor);
       
-      const { error } = await (supabase.from('solicitacoes_pagamento') as any).insert({
+      const { data: insertedData, error } = await (supabase.from('solicitacoes_pagamento') as any).insert({
         centro_custo_id: data.centro_custo_id,
         fornecedor_id: data.fornecedor_id,
         solicitante_id: user.id,
@@ -166,9 +203,14 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
         data_vencimento: format(data.data_vencimento, 'yyyy-MM-dd'),
         observacoes: data.observacoes || null,
         status: 'rascunho',
-      });
+      }).select('id').single();
 
       if (error) throw error;
+
+      // Upload anexos se houver
+      if (arquivos.length > 0 && insertedData?.id) {
+        await uploadAnexos(insertedData.id);
+      }
 
       toast({
         title: 'Sucesso',
@@ -365,6 +407,18 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, onSuccess }: NovaSol
                   </FormItem>
                 )}
               />
+
+              <Separator className="my-4" />
+
+              {/* Upload de Anexos */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Anexos (opcional)</h4>
+                <UploadAnexos
+                  arquivos={arquivos}
+                  onArquivosChange={setArquivos}
+                  disabled={loading}
+                />
+              </div>
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button

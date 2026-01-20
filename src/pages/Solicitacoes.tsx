@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Eye, Loader2, Send } from 'lucide-react';
 import type { StatusSolicitacao } from '@/types/database';
 import { NovaSolicitacaoDialog } from '@/components/solicitacoes/NovaSolicitacaoDialog';
+import { DetalhesSolicitacaoDialog } from '@/components/solicitacoes/DetalhesSolicitacaoDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Solicitacao {
@@ -53,6 +54,8 @@ export default function Solicitacoes() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [detalhesOpen, setDetalhesOpen] = useState(false);
+  const [selectedSolicitacaoId, setSelectedSolicitacaoId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -118,6 +121,11 @@ export default function Solicitacoes() {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
+  const handleViewDetails = (id: string) => {
+    setSelectedSolicitacaoId(id);
+    setDetalhesOpen(true);
+  };
+
   return (
     <AppLayout title="Solicitações de Pagamento">
       <div className="flex justify-between items-center mb-6">
@@ -175,7 +183,12 @@ export default function Solicitacoes() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" title="Ver detalhes">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        title="Ver detalhes"
+                        onClick={() => handleViewDetails(solicitacao.id)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       {solicitacao.status === 'rascunho' && (
@@ -206,6 +219,12 @@ export default function Solicitacoes() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={fetchSolicitacoes}
+      />
+
+      <DetalhesSolicitacaoDialog
+        open={detalhesOpen}
+        onOpenChange={setDetalhesOpen}
+        solicitacaoId={selectedSolicitacaoId}
       />
     </AppLayout>
   );
