@@ -71,16 +71,16 @@ export default function CentrosCusto() {
 
     try {
       if (editingCentro) {
-        const { error } = await supabase
-          .from('centros_custo')
+        const { error } = await (supabase
+          .from('centros_custo') as any)
           .update({ codigo: formData.codigo, nome: formData.nome })
           .eq('id', editingCentro.id);
 
         if (error) throw error;
         toast({ title: 'Sucesso', description: 'Centro de custo atualizado' });
       } else {
-        const { error } = await supabase
-          .from('centros_custo')
+        const { error } = await (supabase
+          .from('centros_custo') as any)
           .insert({ codigo: formData.codigo, nome: formData.nome });
 
         if (error) throw error;

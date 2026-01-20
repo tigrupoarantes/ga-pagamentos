@@ -124,16 +124,16 @@ export default function Fornecedores() {
       };
 
       if (editingFornecedor) {
-        const { error } = await supabase
-          .from('fornecedores')
+        const { error } = await (supabase
+          .from('fornecedores') as any)
           .update(payload)
           .eq('id', editingFornecedor.id);
 
         if (error) throw error;
         toast({ title: 'Sucesso', description: 'Fornecedor atualizado' });
       } else {
-        const { error } = await supabase
-          .from('fornecedores')
+        const { error } = await (supabase
+          .from('fornecedores') as any)
           .insert(payload);
 
         if (error) throw error;

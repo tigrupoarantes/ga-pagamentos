@@ -28,11 +28,11 @@ export default function Dashboard() {
     try {
       const { data: solicitacoes, error } = await supabase
         .from('solicitacoes_pagamento')
-        .select('status, valor');
+        .select('status, valor') as { data: { status: string; valor: number }[] | null; error: any };
 
       if (error) throw error;
 
-      const statsData = solicitacoes?.reduce(
+      const statsData = (solicitacoes || []).reduce(
         (acc, sol) => ({
           totalSolicitacoes: acc.totalSolicitacoes + 1,
           pendentes: acc.pendentes + (sol.status === 'pendente_aprovacao' ? 1 : 0),
@@ -42,7 +42,7 @@ export default function Dashboard() {
         { totalSolicitacoes: 0, pendentes: 0, aprovadas: 0, valorTotal: 0 }
       );
 
-      setStats(statsData || { totalSolicitacoes: 0, pendentes: 0, aprovadas: 0, valorTotal: 0 });
+      setStats(statsData);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {

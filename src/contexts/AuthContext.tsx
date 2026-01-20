@@ -59,14 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId);
+        .eq('user_id', userId) as { data: { role: AppRole }[] | null; error: any };
       
       if (error) {
         console.error('Error fetching roles:', error);
         return;
       }
       
-      setRoles(data?.map(r => r.role as AppRole) ?? []);
+      setRoles(data?.map(r => r.role) ?? []);
     } catch (err) {
       console.error('Error fetching roles:', err);
     }
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && data.user) {
       // Create profile
-      await supabase.from('profiles').insert({
+      await (supabase.from('profiles') as any).insert({
         id: data.user.id,
         nome,
         email,

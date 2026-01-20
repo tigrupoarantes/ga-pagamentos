@@ -106,16 +106,16 @@ export default function OrcamentoAnual() {
       };
 
       if (editingOrcamento) {
-        const { error } = await supabase
-          .from('orcamento_anual')
+        const { error } = await (supabase
+          .from('orcamento_anual') as any)
           .update(payload)
           .eq('id', editingOrcamento.id);
 
         if (error) throw error;
         toast({ title: 'Sucesso', description: 'Orçamento atualizado' });
       } else {
-        const { error } = await supabase
-          .from('orcamento_anual')
+        const { error } = await (supabase
+          .from('orcamento_anual') as any)
           .insert(payload);
 
         if (error) throw error;
