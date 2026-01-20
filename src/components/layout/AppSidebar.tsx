@@ -29,6 +29,7 @@ import {
   LogOut,
   ChevronUp,
   CreditCard,
+  ClipboardCheck,
 } from 'lucide-react';
 
 const menuItems = [
@@ -41,6 +42,12 @@ const menuItems = [
     title: 'Solicitações',
     url: '/solicitacoes',
     icon: FileText,
+  },
+  {
+    title: 'Aprovações',
+    url: '/aprovacoes',
+    icon: ClipboardCheck,
+    requiresApprover: true,
   },
 ];
 
@@ -68,9 +75,11 @@ const adminItems = [
 ];
 
 export function AppSidebar() {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, hasRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const canApprove = hasRole('admin') || hasRole('aprovador');
 
   const handleLogout = async () => {
     await signOut();
@@ -100,17 +109,19 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => navigate(item.url)}
-                    isActive={location.pathname === item.url}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems
+                .filter((item) => !item.requiresApprover || canApprove)
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      onClick={() => navigate(item.url)}
+                      isActive={location.pathname === item.url}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
