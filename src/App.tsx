@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Solicitacoes from "./pages/Solicitacoes";
+import Aprovacoes from "./pages/Aprovacoes";
 import CentrosCusto from "./pages/admin/CentrosCusto";
 import Fornecedores from "./pages/admin/Fornecedores";
 import OrcamentoAnual from "./pages/admin/OrcamentoAnual";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/solicitacoes" element={<Solicitacoes />} />
+            <Route path="/aprovacoes" element={<Aprovacoes />} />
             <Route path="/admin/centros-custo" element={<CentrosCusto />} />
             <Route path="/admin/fornecedores" element={<Fornecedores />} />
             <Route path="/admin/orcamento" element={<OrcamentoAnual />} />
