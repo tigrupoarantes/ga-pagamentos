@@ -12,6 +12,7 @@ import CentrosCusto from "./pages/admin/CentrosCusto";
 import Fornecedores from "./pages/admin/Fornecedores";
 import OrcamentoAnual from "./pages/admin/OrcamentoAnual";
 import WorkflowConfig from "./pages/admin/WorkflowConfig";
+import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
 import Usuarios from "./pages/admin/Usuarios";
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +34,8 @@ const App = () => (
             <Route path="/admin/centros-custo" element={<CentrosCusto />} />
             <Route path="/admin/fornecedores" element={<Fornecedores />} />
             <Route path="/admin/orcamento" element={<OrcamentoAnual />} />
-            <Route path="/admin/workflow" element={<WorkflowConfig />} />
+              <Route path="/admin/workflow" element={<WorkflowConfig />} />
+              <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
             <Route path="/admin/usuarios" element={<Usuarios />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
