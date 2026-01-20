@@ -26,6 +26,7 @@ interface Solicitacao {
   data_vencimento: string;
   status: StatusSolicitacao;
   created_at: string;
+  centro_custo_id: string;
   centro_custo: { codigo: string; nome: string } | null;
   fornecedor: { razao_social: string; cnpj: string } | null;
   solicitante: { nome: string; email: string } | null;
@@ -81,6 +82,7 @@ export default function Aprovacoes() {
 
       const formattedData = (data || []).map((item) => ({
         ...item,
+        centro_custo_id: item.centro_custo_id,
         centro_custo: centrosMap.get(item.centro_custo_id) || null,
         fornecedor: fornecedoresMap.get(item.fornecedor_id) || null,
         solicitante: profilesMap.get(item.solicitante_id) || null,
