@@ -53,6 +53,24 @@ const formatCNPJ = (value: string) => {
     .slice(0, 18);
 };
 
+const formatCPF = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  return numbers
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    .slice(0, 14);
+};
+
+const formatDocumento = (value: string, tipoPessoa: 'pf' | 'pj') => {
+  return tipoPessoa === 'pf' ? formatCPF(value) : formatCNPJ(value);
+};
+
+const detectTipoPessoa = (documento: string): 'pf' | 'pj' => {
+  const numbers = documento.replace(/\D/g, '');
+  return numbers.length <= 11 ? 'pf' : 'pj';
+};
+
 export default function Fornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +78,8 @@ export default function Fornecedores() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFornecedor, setEditingFornecedor] = useState<Fornecedor | null>(null);
   const [formData, setFormData] = useState({
-    cnpj: '',
+    tipo_pessoa: 'pj' as 'pf' | 'pj',
+    documento: '',
     razao_social: '',
     nome_fantasia: '',
     banco: '',
@@ -100,11 +119,15 @@ export default function Fornecedores() {
     e.preventDefault();
     setSaving(true);
 
-    const cnpjNumbers = formData.cnpj.replace(/\D/g, '');
-    if (cnpjNumbers.length !== 14) {
+    const documentoNumbers = formData.documento.replace(/\D/g, '');
+    const tamanhoEsperado = formData.tipo_pessoa === 'pf' ? 11 : 14;
+    
+    if (documentoNumbers.length !== tamanhoEsperado) {
       toast({
         title: 'Erro',
-        description: 'CNPJ deve ter 14 dígitos',
+        description: formData.tipo_pessoa === 'pf' 
+          ? 'CPF deve ter 11 dígitos' 
+          : 'CNPJ deve ter 14 dígitos',
         variant: 'destructive',
       });
       setSaving(false);
@@ -113,7 +136,7 @@ export default function Fornecedores() {
 
     try {
       const payload = {
-        cnpj: cnpjNumbers,
+        cnpj: documentoNumbers,
         razao_social: formData.razao_social,
         nome_fantasia: formData.nome_fantasia || null,
         banco: formData.banco || null,
@@ -157,7 +180,8 @@ export default function Fornecedores() {
   const resetForm = () => {
     setEditingFornecedor(null);
     setFormData({
-      cnpj: '',
+      tipo_pessoa: 'pj',
+      documento: '',
       razao_social: '',
       nome_fantasia: '',
       banco: '',
@@ -170,8 +194,10 @@ export default function Fornecedores() {
 
   const handleEdit = (fornecedor: Fornecedor) => {
     setEditingFornecedor(fornecedor);
+    const tipoPessoa = detectTipoPessoa(fornecedor.cnpj);
     setFormData({
-      cnpj: formatCNPJ(fornecedor.cnpj),
+      tipo_pessoa: tipoPessoa,
+      documento: formatDocumento(fornecedor.cnpj, tipoPessoa),
       razao_social: fornecedor.razao_social,
       nome_fantasia: fornecedor.nome_fantasia || '',
       banco: fornecedor.banco || '',
@@ -229,24 +255,50 @@ export default function Fornecedores() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Label>Tipo de Pessoa</Label>
+                  <Select
+                    value={formData.tipo_pessoa}
+                    onValueChange={(value: 'pf' | 'pj') => setFormData({ 
+                      ...formData, 
+                      tipo_pessoa: value,
+                      documento: ''
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                      <SelectItem value="pf">Pessoa Física</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="documento">
+                    {formData.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}
+                  </Label>
                   <Input
-                    id="cnpj"
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
-                    placeholder="00.000.000/0000-00"
+                    id="documento"
+                    value={formData.documento}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      documento: formatDocumento(e.target.value, formData.tipo_pessoa) 
+                    })}
+                    placeholder={formData.tipo_pessoa === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="razao_social">Razão Social</Label>
+                  <Label htmlFor="razao_social">
+                    {formData.tipo_pessoa === 'pf' ? 'Nome Completo' : 'Razão Social'}
+                  </Label>
                   <Input
                     id="razao_social"
                     value={formData.razao_social}
                     onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
-                    placeholder="Razão social do fornecedor"
+                    placeholder={formData.tipo_pessoa === 'pf' ? 'Nome completo' : 'Razão social do fornecedor'}
                     required
                   />
                 </div>
@@ -337,8 +389,9 @@ export default function Fornecedores() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>CNPJ</TableHead>
-              <TableHead>Razão Social</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>CPF/CNPJ</TableHead>
+              <TableHead>Nome/Razão Social</TableHead>
               <TableHead>Nome Fantasia</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[100px]">Ações</TableHead>
@@ -347,49 +400,57 @@ export default function Fornecedores() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
             ) : fornecedores.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Nenhum fornecedor cadastrado
                 </TableCell>
               </TableRow>
             ) : (
-              fornecedores.map((fornecedor) => (
-                <TableRow key={fornecedor.id}>
-                  <TableCell className="font-mono text-sm">
-                    {formatCNPJ(fornecedor.cnpj)}
-                  </TableCell>
-                  <TableCell className="font-medium">{fornecedor.razao_social}</TableCell>
-                  <TableCell>{fornecedor.nome_fantasia || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={fornecedor.ativo ? 'default' : 'secondary'}>
-                      {fornecedor.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(fornecedor)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(fornecedor.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              fornecedores.map((fornecedor) => {
+                const tipoPessoa = detectTipoPessoa(fornecedor.cnpj);
+                return (
+                  <TableRow key={fornecedor.id}>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {tipoPessoa === 'pf' ? 'PF' : 'PJ'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {formatDocumento(fornecedor.cnpj, tipoPessoa)}
+                    </TableCell>
+                    <TableCell className="font-medium">{fornecedor.razao_social}</TableCell>
+                    <TableCell>{fornecedor.nome_fantasia || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant={fornecedor.ativo ? 'default' : 'secondary'}>
+                        {fornecedor.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(fornecedor)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(fornecedor.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
