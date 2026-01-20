@@ -12,8 +12,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Eye, Loader2 } from 'lucide-react';
+import { Plus, Eye, Loader2, Send } from 'lucide-react';
 import type { StatusSolicitacao } from '@/types/database';
+import { NovaSolicitacaoDialog } from '@/components/solicitacoes/NovaSolicitacaoDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Solicitacao {
   id: string;
@@ -46,8 +48,11 @@ const statusVariants: Record<StatusSolicitacao, 'default' | 'secondary' | 'destr
 };
 
 export default function Solicitacoes() {
+  const { user } = useAuth();
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,7 +64,7 @@ export default function Solicitacoes() {
       const { data, error } = await supabase
         .from('solicitacoes_pagamento')
         .select('*, centros_custo(codigo, nome), fornecedores(razao_social)')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: Solicitacao[] | null; error: any };
 
       if (error) throw error;
       setSolicitacoes(data || []);
@@ -72,6 +77,33 @@ export default function Solicitacoes() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitForApproval = async (id: string) => {
+    setSubmittingId(id);
+    try {
+      const { error } = await (supabase.from('solicitacoes_pagamento') as any)
+        .update({ status: 'pendente_aprovacao' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Solicitação enviada para aprovação',
+      });
+      
+      fetchSolicitacoes();
+    } catch (error: any) {
+      console.error('Error submitting solicitacao:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao enviar solicitação',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -92,7 +124,7 @@ export default function Solicitacoes() {
         <p className="text-muted-foreground">
           Visualize e gerencie suas solicitações de pagamento
         </p>
-        <Button>
+        <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Solicitação
         </Button>
@@ -109,7 +141,7 @@ export default function Solicitacoes() {
               <TableHead>Valor</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Ações</TableHead>
+              <TableHead className="w-[120px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,9 +174,26 @@ export default function Solicitacoes() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" title="Ver detalhes">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {solicitacao.status === 'rascunho' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Enviar para aprovação"
+                          onClick={() => handleSubmitForApproval(solicitacao.id)}
+                          disabled={submittingId === solicitacao.id}
+                        >
+                          {submittingId === solicitacao.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -152,6 +201,12 @@ export default function Solicitacoes() {
           </TableBody>
         </Table>
       </div>
+
+      <NovaSolicitacaoDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={fetchSolicitacoes}
+      />
     </AppLayout>
   );
 }
