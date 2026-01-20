@@ -68,6 +68,11 @@ const adminItems = [
     icon: DollarSign,
   },
   {
+    title: 'Workflow',
+    url: '/admin/workflow',
+    icon: ClipboardCheck,
+  },
+  {
     title: 'Usuários',
     url: '/admin/usuarios',
     icon: Settings,

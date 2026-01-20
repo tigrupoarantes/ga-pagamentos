@@ -59,6 +59,11 @@ interface DetalhesSolicitacaoDialogProps {
 const statusConfig: Record<StatusSolicitacao, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   rascunho: { label: 'Rascunho', variant: 'secondary' },
   pendente_aprovacao: { label: 'Pendente Aprovação', variant: 'outline' },
+  pendente_gestor: { label: 'Aguardando Gestor CC', variant: 'outline' },
+  aprovado_gestor: { label: 'Aprovado Gestor', variant: 'secondary' },
+  pendente_gerente_financeiro: { label: 'Aguardando Ger. Financeiro', variant: 'outline' },
+  aprovado_gerente_financeiro: { label: 'Aprovado Ger. Financeiro', variant: 'secondary' },
+  pendente_diretor_financeiro: { label: 'Aguardando Dir. Financeiro', variant: 'outline' },
   aprovada: { label: 'Aprovada', variant: 'default' },
   rejeitada: { label: 'Rejeitada', variant: 'destructive' },
   paga: { label: 'Paga', variant: 'default' },

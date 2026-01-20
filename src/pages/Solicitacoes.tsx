@@ -33,6 +33,11 @@ interface Solicitacao {
 const statusLabels: Record<StatusSolicitacao, string> = {
   rascunho: 'Rascunho',
   pendente_aprovacao: 'Pendente',
+  pendente_gestor: 'Aguard. Gestor CC',
+  aprovado_gestor: 'Aprovado Gestor',
+  pendente_gerente_financeiro: 'Aguard. Ger. Fin.',
+  aprovado_gerente_financeiro: 'Aprovado Ger. Fin.',
+  pendente_diretor_financeiro: 'Aguard. Dir. Fin.',
   aprovada: 'Aprovada',
   rejeitada: 'Rejeitada',
   paga: 'Paga',
@@ -42,6 +47,11 @@ const statusLabels: Record<StatusSolicitacao, string> = {
 const statusVariants: Record<StatusSolicitacao, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   rascunho: 'secondary',
   pendente_aprovacao: 'outline',
+  pendente_gestor: 'outline',
+  aprovado_gestor: 'secondary',
+  pendente_gerente_financeiro: 'outline',
+  aprovado_gerente_financeiro: 'secondary',
+  pendente_diretor_financeiro: 'outline',
   aprovada: 'default',
   rejeitada: 'destructive',
   paga: 'default',

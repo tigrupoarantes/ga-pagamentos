@@ -1,6 +1,36 @@
-export type AppRole = 'admin' | 'gestor_centro_custo' | 'aprovador' | 'visualizador';
+export type AppRole = 'admin' | 'gestor_centro_custo' | 'aprovador' | 'visualizador' | 'gerente_financeiro' | 'diretor_financeiro';
 
-export type StatusSolicitacao = 'rascunho' | 'pendente_aprovacao' | 'aprovada' | 'rejeitada' | 'paga' | 'cancelada';
+export type StatusSolicitacao = 
+  | 'rascunho' 
+  | 'pendente_aprovacao' // Legacy - mantido para compatibilidade
+  | 'pendente_gestor'
+  | 'aprovado_gestor'
+  | 'pendente_gerente_financeiro' 
+  | 'aprovado_gerente_financeiro'
+  | 'pendente_diretor_financeiro'
+  | 'aprovada' 
+  | 'rejeitada' 
+  | 'paga' 
+  | 'cancelada';
+
+export interface WorkflowConfig {
+  id: string;
+  chave: string;
+  valor: string;
+  descricao: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AprovacaoHistorico {
+  id: string;
+  solicitacao_id: string;
+  nivel: number;
+  aprovador_id: string;
+  acao: 'aprovado' | 'rejeitado';
+  observacoes: string | null;
+  created_at: string;
+}
 
 export interface Database {
   public: {

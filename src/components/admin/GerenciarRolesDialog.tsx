@@ -38,11 +38,21 @@ const allRoles: { value: AppRole; label: string; description: string }[] = [
   {
     value: 'gestor_centro_custo',
     label: 'Gestor de Centro de Custo',
-    description: 'Pode gerenciar centros de custo atribuídos',
+    description: 'Primeiro nível de aprovação para solicitações do seu centro',
+  },
+  {
+    value: 'gerente_financeiro',
+    label: 'Gerente Financeiro',
+    description: 'Segundo nível de aprovação obrigatório para todas as solicitações',
+  },
+  {
+    value: 'diretor_financeiro',
+    label: 'Diretor Financeiro',
+    description: 'Aprovação final para valores acima do limite configurado',
   },
   {
     value: 'aprovador',
-    label: 'Aprovador',
+    label: 'Aprovador (Legado)',
     description: 'Pode aprovar ou rejeitar solicitações de pagamento',
   },
   {
