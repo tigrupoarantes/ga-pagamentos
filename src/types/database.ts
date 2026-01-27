@@ -25,6 +25,7 @@ export interface WorkflowConfig {
 export interface AprovacaoHistorico {
   id: string;
   solicitacao_id: string;
+  etapa_id: string | null;
   nivel: number;
   aprovador_id: string;
   acao: 'aprovado' | 'rejeitado';
