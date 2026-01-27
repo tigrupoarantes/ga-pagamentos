@@ -10,11 +10,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkflow } from '@/hooks/useWorkflow';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, Loader2, AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertTriangle, TrendingDown, TrendingUp, Workflow } from 'lucide-react';
 import { StatusSolicitacao } from '@/types/database';
+import { EtapaAtual, WorkflowEtapa } from '@/types/workflow';
 
 interface Solicitacao {
   id: string;
@@ -25,6 +28,7 @@ interface Solicitacao {
   status: StatusSolicitacao;
   created_at: string;
   centro_custo_id: string;
+  empresa_id?: string | null;
   centro_custo: { codigo: string; nome: string } | null;
   fornecedor: { razao_social: string; cnpj: string } | null;
   solicitante: { nome: string; email: string } | null;
@@ -56,19 +60,58 @@ export function AcaoAprovacaoDialog({
   const [loading, setLoading] = useState(false);
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null);
   const [loadingOrcamento, setLoadingOrcamento] = useState(false);
+  const [etapaAtual, setEtapaAtual] = useState<EtapaAtual | null>(null);
+  const [loadingEtapa, setLoadingEtapa] = useState(false);
+  const [workflowEtapas, setWorkflowEtapas] = useState<WorkflowEtapa[]>([]);
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
+  const { getEtapaAtual, getWorkflowParaSolicitacao, registrarAprovacao } = useWorkflow();
 
   const isAprovacao = tipo === 'aprovar';
 
-  // Buscar orçamento quando o dialog abrir para aprovação
+  // Buscar orçamento e etapa quando o dialog abrir
   useEffect(() => {
-    if (open && solicitacao && isAprovacao) {
-      fetchOrcamento(solicitacao.centro_custo_id);
+    if (open && solicitacao) {
+      if (isAprovacao) {
+        fetchOrcamento(solicitacao.centro_custo_id);
+      } else {
+        setOrcamento(null);
+      }
+      fetchEtapaAtual();
     } else {
       setOrcamento(null);
+      setEtapaAtual(null);
+      setWorkflowEtapas([]);
     }
   }, [open, solicitacao, isAprovacao]);
+
+  const fetchEtapaAtual = async () => {
+    if (!solicitacao) return;
+
+    setLoadingEtapa(true);
+    try {
+      // Buscar workflow aplicável
+      const etapas = await getWorkflowParaSolicitacao(
+        solicitacao.centro_custo_id,
+        solicitacao.empresa_id || null,
+        solicitacao.valor
+      );
+      setWorkflowEtapas(etapas);
+
+      // Buscar etapa atual
+      const etapa = await getEtapaAtual(
+        solicitacao.id,
+        solicitacao.centro_custo_id,
+        solicitacao.empresa_id || null,
+        solicitacao.valor
+      );
+      setEtapaAtual(etapa);
+    } catch (error) {
+      console.error('Erro ao buscar etapa atual:', error);
+    } finally {
+      setLoadingEtapa(false);
+    }
+  };
 
   const fetchOrcamento = async (centroCustoId: string) => {
     if (!centroCustoId) {
@@ -129,12 +172,49 @@ export function AcaoAprovacaoDialog({
       return;
     }
 
+    // Validar se pode aprovar esta etapa
+    if (etapaAtual && !etapaAtual.podeAprovar && !isAdmin()) {
+      toast({
+        title: 'Sem permissão',
+        description: 'Você não tem permissão para aprovar esta etapa.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const novoStatus = isAprovacao ? 'aprovada' : 'rejeitada';
+      // 1. Registrar no histórico de aprovações (se tiver etapa configurada)
+      if (etapaAtual) {
+        const registrou = await registrarAprovacao(
+          solicitacao.id,
+          etapaAtual.etapa.id,
+          user.id,
+          isAprovacao ? 'aprovado' : 'rejeitado',
+          observacoes.trim() || undefined,
+          etapaAtual.numero
+        );
 
-      // Atualizar a solicitação
+        if (!registrou) {
+          throw new Error('Falha ao registrar aprovação no histórico');
+        }
+      }
+
+      // 2. Determinar o novo status
+      let novoStatus: StatusSolicitacao;
+      
+      if (!isAprovacao) {
+        novoStatus = 'rejeitada';
+      } else if (etapaAtual && etapaAtual.numero < etapaAtual.total) {
+        // Ainda há mais etapas
+        novoStatus = 'pendente_aprovacao';
+      } else {
+        // Última etapa ou sem workflow configurado
+        novoStatus = 'aprovada';
+      }
+
+      // 3. Atualizar a solicitação
       const { error } = await (supabase as any)
         .from('solicitacoes_pagamento')
         .update({
@@ -147,8 +227,8 @@ export function AcaoAprovacaoDialog({
 
       if (error) throw error;
 
-      // Se aprovação, atualizar o valor utilizado do orçamento
-      if (isAprovacao && orcamento) {
+      // 4. Se aprovação final, atualizar o valor utilizado do orçamento
+      if (novoStatus === 'aprovada' && orcamento) {
         const novoValorUtilizado = orcamento.valor_utilizado + solicitacao.valor;
         const { error: orcamentoError } = await (supabase as any)
           .from('orcamento_anual')
@@ -157,13 +237,18 @@ export function AcaoAprovacaoDialog({
 
         if (orcamentoError) {
           console.error('Erro ao atualizar orçamento:', orcamentoError);
-          // Não falhar a aprovação por causa disso, apenas logar
         }
       }
 
+      const mensagemSucesso = isAprovacao
+        ? etapaAtual && etapaAtual.numero < etapaAtual.total
+          ? `Etapa "${etapaAtual.etapa.nome}" aprovada. Aguardando próxima etapa.`
+          : `A solicitação ${solicitacao.numero} foi aprovada com sucesso.`
+        : `A solicitação ${solicitacao.numero} foi rejeitada.`;
+
       toast({
-        title: isAprovacao ? 'Solicitação aprovada' : 'Solicitação rejeitada',
-        description: `A solicitação ${solicitacao.numero} foi ${isAprovacao ? 'aprovada' : 'rejeitada'} com sucesso.`,
+        title: isAprovacao ? 'Aprovação registrada' : 'Solicitação rejeitada',
+        description: mensagemSucesso,
       });
 
       setObservacoes('');
@@ -182,6 +267,8 @@ export function AcaoAprovacaoDialog({
   const handleClose = () => {
     setObservacoes('');
     setOrcamento(null);
+    setEtapaAtual(null);
+    setWorkflowEtapas([]);
     onOpenChange(false);
   };
 
@@ -231,6 +318,59 @@ export function AcaoAprovacaoDialog({
               </span>
             </div>
           </div>
+
+          {/* Informações da Etapa Atual (workflow dinâmico) */}
+          {loadingEtapa ? (
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-sm text-muted-foreground">Carregando workflow...</span>
+              </div>
+            </div>
+          ) : etapaAtual ? (
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Workflow className="h-4 w-4" />
+                  Etapa do Workflow
+                </div>
+                <Badge variant="secondary">
+                  {etapaAtual.numero} de {etapaAtual.total}
+                </Badge>
+              </div>
+              <div className="text-sm">
+                <p className="font-medium">{etapaAtual.etapa.nome}</p>
+                {etapaAtual.etapa.tipo === 'gestor_cc' && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Aprovação do Gestor do Centro de Custo
+                  </p>
+                )}
+              </div>
+              {!etapaAtual.podeAprovar && !isAdmin() && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-warning/10 border border-warning/20">
+                  <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-warning">Sem permissão</p>
+                    <p className="text-muted-foreground text-xs">
+                      Você não está configurado como aprovador desta etapa.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : workflowEtapas.length === 0 ? (
+            <div className="rounded-lg border p-4">
+              <div className="flex items-start gap-2 p-3 rounded-md bg-muted">
+                <Workflow className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Sem workflow configurado</p>
+                  <p className="text-muted-foreground text-xs">
+                    A aprovação será processada diretamente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Informações de Orçamento (apenas para aprovação) */}
           {isAprovacao && (
@@ -336,7 +476,13 @@ export function AcaoAprovacaoDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || loadingOrcamento || (isAprovacao && !temSaldoSuficiente && !isAdmin())}
+            disabled={
+              loading || 
+              loadingOrcamento || 
+              loadingEtapa ||
+              (isAprovacao && !temSaldoSuficiente && !isAdmin()) ||
+              (etapaAtual && !etapaAtual.podeAprovar && !isAdmin())
+            }
             variant={isAprovacao ? 'default' : 'destructive'}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
