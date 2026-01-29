@@ -64,20 +64,23 @@ export default function Dashboard() {
       description: 'Todas as solicitações',
       icon: FileText,
       color: 'text-primary',
+      bgColor: 'bg-primary/10',
     },
     {
       title: 'Pendentes',
       value: stats.pendentes,
       description: 'Aguardando aprovação',
       icon: Clock,
-      color: 'text-yellow-600',
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
     },
     {
       title: 'Aprovadas',
       value: stats.aprovadas,
       description: 'Aprovadas ou pagas',
       icon: CheckCircle,
-      color: 'text-green-600',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
     },
     {
       title: 'Valor Total',
@@ -85,17 +88,24 @@ export default function Dashboard() {
       description: 'Soma de todas solicitações',
       icon: DollarSign,
       color: 'text-primary',
+      bgColor: 'bg-primary/10',
     },
   ];
 
   return (
     <AppLayout title="Dashboard">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card.title}>
+        {cards.map((card, index) => (
+          <Card 
+            key={card.title} 
+            className={`card-hover animate-fade-in-up animate-stagger-${index + 1}`}
+            style={{ animationFillMode: 'backwards' }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
+              <div className={`p-2 rounded-lg ${card.bgColor}`}>
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -108,7 +118,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-8">
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}>
           <CardHeader>
             <CardTitle>Bem-vindo ao GA Pagamentos</CardTitle>
             <CardDescription>
