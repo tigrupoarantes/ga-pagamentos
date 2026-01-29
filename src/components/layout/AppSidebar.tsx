@@ -96,22 +96,22 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-3">
-          <div className="p-2 bg-primary rounded-lg">
-            <CreditCard className="h-5 w-5 text-primary-foreground" />
+    <Sidebar className="border-r-0">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-3 py-4">
+          <div className="p-2 bg-sidebar-primary rounded-apple shadow-apple">
+            <CreditCard className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold text-sm">GA Pagamentos</span>
-            <span className="text-xs text-muted-foreground">v1.0.0</span>
+            <span className="font-semibold text-sm text-sidebar-foreground">GA Pagamentos</span>
+            <span className="text-xs text-sidebar-foreground/60">v1.0.0</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems
@@ -121,6 +121,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => navigate(item.url)}
                       isActive={location.pathname === item.url}
+                      className="transition-all duration-200 hover:bg-sidebar-accent"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -133,7 +134,7 @@ export function AppSidebar() {
 
         {isAdmin() && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administração</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground/60">Administração</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminItems.map((item) => (
@@ -141,6 +142,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       onClick={() => navigate(item.url)}
                       isActive={location.pathname === item.url}
+                      className="transition-all duration-200 hover:bg-sidebar-accent"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -153,19 +155,19 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="w-full">
+                <SidebarMenuButton className="w-full transition-all duration-200 hover:bg-sidebar-accent">
                   <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                    <AvatarFallback className="text-xs bg-sidebar-primary text-sidebar-primary-foreground">
                       {user?.email ? getInitials(user.email) : 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate">{user?.email}</span>
-                  <ChevronUp className="ml-auto h-4 w-4" />
+                  <span className="truncate text-sidebar-foreground">{user?.email}</span>
+                  <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/60" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
