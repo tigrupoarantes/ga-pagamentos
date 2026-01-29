@@ -1,199 +1,278 @@
 
 
-## Plano: Integrar Workflow Dinamico no Fluxo de Aprovacoes
+## Plano: Aplicar Identidade Visual GA360 Design System
 
-### Objetivo
+### Resumo Executivo
 
-Atualizar o sistema de aprovacoes para usar as etapas de workflow configuradas dinamicamente, em vez de um fluxo fixo. Isso inclui modificar o `AcaoAprovacaoDialog` e filtrar a pagina de `Aprovacoes` para mostrar apenas solicitacoes que o usuario pode aprovar.
+Transformar o design atual do GA Pagamentos para seguir o GA360 Design System, uma estetica minimalista inspirada na Apple com:
+- Nova paleta de cores baseada em **Violeta** (#8B5CF6) como cor primaria
+- Tipografia SF Pro / System fonts
+- Border radius maior (12px base)
+- Efeitos de glassmorphism
+- Sombras sutis estilo Apple
+- Animacoes suaves e transicoes refinadas
+- Sidebar com tema escuro
 
 ---
 
-### 1. Arquivos a Modificar
+### 1. Comparativo de Mudancas
 
-| Arquivo | Alteracao |
+| Elemento | Atual | GA360 |
+|----------|-------|-------|
+| Cor Primaria | Azul (217 91% 60%) | Violeta (257 85% 60%) |
+| Border Radius | 0.5rem (8px) | 0.75rem (12px) |
+| Fonte | Inter | SF Pro / System |
+| Sidebar Background | Cinza claro | Tema escuro (252 28% 14%) |
+| Sombras | shadow-sm padrao | Apple-style shadows |
+| Animacoes | Apenas accordion | Fade, scale, slide, float |
+
+---
+
+### 2. Arquivos a Modificar
+
+| Arquivo | Alteracoes |
 |---------|-----------|
-| `src/components/aprovacoes/AcaoAprovacaoDialog.tsx` | Integrar logica de workflow dinamico |
-| `src/pages/Aprovacoes.tsx` | Filtrar solicitacoes por etapa atual do usuario |
-| `src/components/aprovacoes/TimelineAprovacoes.tsx` | Exibir nome da etapa dinamica |
-| `src/components/aprovacoes/DetalhesSolicitacaoDialog.tsx` | Mostrar progresso do workflow |
+| `src/index.css` | Variaveis CSS (cores, glassmorphism, transicoes) |
+| `tailwind.config.ts` | Keyframes, sombras, espacamentos, border-radius |
+| `src/components/ui/button.tsx` | Adicionar transicoes suaves |
+| `src/components/ui/card.tsx` | Sombras Apple, hover effects |
+| `src/components/ui/input.tsx` | Estados valido/invalido |
+| `src/components/ui/badge.tsx` | Cores de status semanticas |
+| `src/pages/Auth.tsx` | Glass card no login |
+| `src/components/layout/AppSidebar.tsx` | Tema escuro |
+| `src/pages/Dashboard.tsx` | Cards com hover effects |
 
 ---
 
-### 2. Logica de Aprovacao com Workflow Dinamico
+### 3. Detalhes Tecnicos
 
-#### 2.1 Fluxo do AcaoAprovacaoDialog
+#### 3.1 Novas Variaveis CSS (index.css)
 
+**Cores Light Mode:**
 ```text
-+------------------+     +------------------+     +------------------+
-|  Buscar workflow |---->|  Identificar     |---->|  Verificar se    |
-|  para CC/Empresa |     |  etapa atual     |     |  pode aprovar    |
-+------------------+     +------------------+     +------------------+
-                                                          |
-                                                          v
-+------------------+     +------------------+     +------------------+
-|  Atualizar       |<----|  Registrar no    |<----|  Processar       |
-|  status final    |     |  historico       |     |  aprovacao       |
-+------------------+     +------------------+     +------------------+
+--primary: 257 85% 60%        (Violeta #8B5CF6)
+--accent: 256 91% 67%         (Violeta Suave #A78BFA)
+--background: 0 0% 100%
+--foreground: 240 10% 3.9%
+--success: 142 76% 36%
+--info: 199 89% 48%
+--status-available: 142 76% 36%
+--status-allocated: 257 85% 60%
+--status-maintenance: 38 92% 50%
+--status-inactive: 240 3.8% 50%
 ```
 
-**Passos:**
-
-1. Buscar workflow aplicavel usando `useWorkflow.getWorkflowParaSolicitacao()`
-2. Verificar historico de aprovacoes (`aprovacoes_historico`)
-3. Encontrar proxima etapa nao aprovada
-4. Validar se usuario atual pode aprovar esta etapa
-5. Registrar aprovacao com `etapa_id` e `nivel`
-6. Determinar novo status:
-   - Se ha mais etapas -> `pendente_aprovacao` (ou status custom)
-   - Se ultima etapa -> `aprovada`
-   - Se rejeitado -> `rejeitada`
-
----
-
-### 3. Mudancas no AcaoAprovacaoDialog
-
-#### 3.1 Novos States e Hooks
-
-```typescript
-// Importar useWorkflow
-import { useWorkflow } from '@/hooks/useWorkflow';
-
-// Adicionar estados
-const [etapaAtual, setEtapaAtual] = useState<EtapaAtual | null>(null);
-const [loadingEtapa, setLoadingEtapa] = useState(false);
-```
-
-#### 3.2 Buscar Etapa Atual ao Abrir
-
-- Usar `getEtapaAtual()` do `useWorkflow` para identificar em qual etapa esta a solicitacao
-- Exibir informacoes da etapa no dialog (nome, numero, total)
-
-#### 3.3 Novo handleSubmit
-
-```typescript
-const handleSubmit = async () => {
-  // 1. Registrar no historico de aprovacoes
-  await registrarAprovacao(
-    solicitacao.id,
-    etapaAtual.etapa.id,
-    user.id,
-    tipo === 'aprovar' ? 'aprovado' : 'rejeitado',
-    observacoes,
-    etapaAtual.numero
-  );
-  
-  // 2. Buscar proxima etapa
-  const workflow = await getWorkflowParaSolicitacao(...);
-  const proximaEtapa = workflow.find(e => e.ordem > etapaAtual.etapa.ordem);
-  
-  // 3. Atualizar status
-  if (tipo === 'rejeitar') {
-    novoStatus = 'rejeitada';
-  } else if (proximaEtapa) {
-    novoStatus = 'pendente_aprovacao';
-  } else {
-    novoStatus = 'aprovada';
-  }
-  
-  // 4. Update solicitacao
-  await supabase.from('solicitacoes_pagamento').update({ status });
-};
-```
-
----
-
-### 4. Filtro na Pagina de Aprovacoes
-
-#### 4.1 Nova Logica de Filtragem
-
-Modificar `fetchSolicitacoes` em `Aprovacoes.tsx`:
-
-1. Buscar todas solicitacoes com status `pendente_aprovacao`
-2. Para cada uma, identificar a etapa atual
-3. Verificar se o usuario logado pode aprovar nessa etapa:
-   - Usuario especifico configurado como aprovador
-   - Role do usuario corresponde a role da etapa
-   - E gestor do centro de custo (se tipo = `gestor_cc`)
-4. Filtrar e mostrar apenas as que o usuario pode aprovar
-
-#### 4.2 Mostrar Informacao da Etapa na Tabela
-
-Adicionar coluna "Etapa Atual" na tabela para o usuario saber em que ponto do fluxo a solicitacao esta.
-
----
-
-### 5. Atualizacao do TimelineAprovacoes
-
-#### 5.1 Usar Nome da Etapa Dinamica
-
-Modificar para buscar o nome da etapa a partir da tabela `workflow_etapas` em vez de usar labels fixos:
-
-```typescript
-// Antes: nivelLabels[item.nivel]
-// Depois: item.etapa?.nome || `Etapa ${item.nivel}`
-```
-
----
-
-### 6. Exibir Progresso no DetalhesSolicitacaoDialog
-
-Adicionar componente de progresso visual:
-
+**Cores Dark Mode:**
 ```text
-[ Etapa 1: Gestor CC ] ---> [ Etapa 2: Ger. Financeiro ] ---> [ Etapa 3: Diretor ]
-      [x]                          [atual]                         [ ]
+--primary: 257 85% 65%
+--accent: 256 91% 70%
+--background: 240 10% 3.9%
+--foreground: 0 0% 100%
+```
+
+**Sidebar (Tema Escuro):**
+```text
+--sidebar-background: 252 28% 14%
+--sidebar-foreground: 0 0% 100%
+--sidebar-primary: 257 85% 60%
+--sidebar-border: 252 28% 20%
+```
+
+**Glassmorphism:**
+```text
+--glass-bg: rgba(255, 255, 255, 0.8)       (light)
+--glass-bg: rgba(15, 15, 20, 0.85)         (dark)
+--glass-border: rgba(255, 255, 255, 0.5)   (light)
+--glass-border: rgba(255, 255, 255, 0.08)  (dark)
+```
+
+**Transicoes:**
+```text
+--transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1)
+--transition-smooth: 320ms cubic-bezier(0.4, 0, 0.2, 1)
+--transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1)
+```
+
+**Espacamentos Apple:**
+```text
+--apple-sm: 0.75rem   (12px)
+--apple-md: 1.5rem    (24px)
+--apple-lg: 2.5rem    (40px)
+--apple-xl: 4rem      (64px)
 ```
 
 ---
 
-### 7. Tipos a Adicionar/Atualizar
+#### 3.2 Tailwind Config (tailwind.config.ts)
 
-#### 7.1 Em `src/types/workflow.ts`
+**Border Radius:**
+```text
+--radius: 0.75rem (12px base)
+rounded-apple: 16px
+rounded-apple-lg: 24px
+```
 
-Ja existe `EtapaAtual` interface. Verificar se precisa ajustar.
+**Sombras Apple-style:**
+```text
+shadow-apple: 0 2px 8px rgba(0,0,0,0.04), 0 4px 24px rgba(0,0,0,0.06)
+shadow-apple-hover: 0 4px 16px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.08)
+shadow-apple-lg: 0 8px 32px rgba(0,0,0,0.08), 0 16px 64px rgba(0,0,0,0.06)
+shadow-glass: 0 25px 50px -12px rgba(0, 0, 0, 0.1)
+shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)
+```
 
-#### 7.2 Em `src/types/database.ts`
+**Novas Animacoes:**
+```text
+fadeIn: opacity 0 -> 1
+fadeInUp: opacity + translateY(16px) -> 0
+scaleIn: scale(0.95) -> 1
+slideInRight: translateX(16px) -> 0
+float: translateY(0) -> -10px -> 0 (infinito)
+shake: translateX +/- 4px (erro)
+```
 
-Atualizar `AprovacaoHistorico` para incluir `etapa_id`:
-
-```typescript
-export interface AprovacaoHistorico {
-  id: string;
-  solicitacao_id: string;
-  etapa_id: string | null; // Adicionar
-  nivel: number;
-  aprovador_id: string;
-  acao: 'aprovado' | 'rejeitado';
-  observacoes: string | null;
-  created_at: string;
-}
+**Classes Utilitarias:**
+```text
+.glass          - Glassmorphism basico
+.glass-card     - Card com glassmorphism
+.hover-scale    - Scale 1.05 no hover
+.hover-lift     - Eleva + sombra
+.card-hover     - Efeito completo para cards
+.animate-fade-in
+.animate-fade-in-up
+.animate-scale-in
+.animate-slide-in-right
+.animate-stagger-1/2/3 (delays escalonados)
 ```
 
 ---
 
-### 8. Seguranca (RLS)
+#### 3.3 Tipografia
 
-As queries ja usam `supabase as any` para contornar tipagem. As politicas RLS existentes devem cobrir:
-
-- `workflow_etapas`: SELECT para usuarios autenticados
-- `workflow_aprovadores`: SELECT para usuarios autenticados
-- `aprovacoes_historico`: INSERT para aprovadores, SELECT para envolvidos
-
----
-
-### 9. Resumo das Alteracoes
-
-| Componente | O que muda |
-|------------|------------|
-| `AcaoAprovacaoDialog` | Buscar etapa atual, registrar com etapa_id, logica de proxima etapa |
-| `Aprovacoes.tsx` | Filtrar por permissao na etapa atual, mostrar coluna de etapa |
-| `TimelineAprovacoes` | Usar nome dinamico da etapa |
-| `DetalhesSolicitacaoDialog` | Mostrar progresso visual do workflow |
-| `types/database.ts` | Adicionar etapa_id em AprovacaoHistorico |
+Trocar fonte de Inter para SF Pro Display / System fonts:
+```text
+font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", 
+             "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
+```
 
 ---
 
-### 10. Pre-requisitos
+#### 3.4 Componentes UI
 
-Antes de implementar, e necessario que as tabelas `workflow_etapas`, `workflow_aprovadores` e `aprovacoes_historico` estejam criadas no Supabase com os scripts SQL fornecidos anteriormente.
+**Card (card.tsx):**
+- Adicionar `shadow-card` ou `shadow-apple` como padrao
+- Adicionar classes de hover opcionais
+
+**Button (button.tsx):**
+- Melhorar transicoes com `transition-all duration-200`
+- Adicionar efeito de hover mais suave
+
+**Input (input.tsx):**
+- Adicionar classes `.input-valid` (borda verde)
+- Adicionar classes `.input-invalid` (borda vermelha)
+- Foco com cor primaria violeta
+
+**Badge (badge.tsx):**
+- Adicionar variantes de status (success, warning, info)
+- Cores semanticas conforme documentacao
+
+---
+
+#### 3.5 Pagina de Auth
+
+Aplicar glassmorphism no card de login:
+```text
+- Fundo com gradiente sutil
+- Card com classe .glass-card
+- Blur de 20px
+- Sombra glass
+- Border radius 24px
+```
+
+---
+
+#### 3.6 Sidebar
+
+Aplicar tema escuro conforme GA360:
+```text
+- Background: 252 28% 14% (roxo escuro)
+- Texto: branco
+- Items ativos: violeta primario
+- Bordas: 252 28% 20%
+```
+
+---
+
+#### 3.7 Dashboard
+
+Cards com efeitos hover:
+```text
+- Sombra apple por padrao
+- Hover lift effect
+- Animacao de entrada staggered
+```
+
+---
+
+### 4. Scrollbar Customizada
+
+Adicionar estilo fino e discreto:
+```text
+width: 6px
+thumb: muted-foreground com 20% opacidade
+hover: 40% opacidade
+border-radius: 3px
+```
+
+---
+
+### 5. Focus States
+
+Padronizar focus ring com cor primaria violeta:
+```text
+focus-visible: ring-2 ring-primary ring-offset-2
+```
+
+---
+
+### 6. Ordem de Implementacao
+
+1. **index.css** - Variaveis base (cores, glassmorphism, transicoes)
+2. **tailwind.config.ts** - Sombras, animacoes, border-radius
+3. **Componentes UI** - button, card, input, badge
+4. **Auth.tsx** - Glass card no login
+5. **AppSidebar** - Tema escuro
+6. **Dashboard** - Cards com hover effects
+7. **Testes visuais** - Verificar consistencia
+
+---
+
+### 7. Impacto Visual
+
+Antes (Azul, sombras padrao, Inter):
+```text
++------------------+
+|  GA Pagamentos   |  <- Sidebar cinza claro
++------------------+
+|   Card azul      |  <- Botoes azuis
+|   sombra basica  |  <- Sombras padrao
++------------------+
+```
+
+Depois (Violeta, glassmorphism, SF Pro):
+```text
++------------------+
+|  GA Pagamentos   |  <- Sidebar roxo escuro
++------------------+
+|   Card violeta   |  <- Botoes violeta
+|   sombra apple   |  <- Efeitos glass
+|   hover lift     |  <- Animacoes suaves
++------------------+
+```
+
+---
+
+### 8. Pre-requisitos
+
+Nenhuma dependencia adicional necessaria. Todas as mudancas sao em CSS/Tailwind e componentes existentes.
 
