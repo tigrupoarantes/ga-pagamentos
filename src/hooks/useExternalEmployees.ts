@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { ExternalEmployee, EmployeeFilters } from '@/types/external';
 
 export function useExternalEmployees(filters: EmployeeFilters = {}) {
-  const { company_id, is_vendedor, ativo = true, search } = filters;
+  const { company_id, is_vendedor, ativo, search } = filters;
 
   return useQuery({
     queryKey: ['external_employees', filters],

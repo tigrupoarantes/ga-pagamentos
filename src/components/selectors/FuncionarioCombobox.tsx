@@ -34,7 +34,7 @@ export function FuncionarioCombobox({
   onChange,
   companyId,
   apenasVendedores = false,
-  apenasAtivos = true,
+  apenasAtivos,
   placeholder = 'Selecione um funcionário...',
   disabled = false,
   className,
@@ -45,7 +45,7 @@ export function FuncionarioCombobox({
   const { data: employees, isLoading } = useExternalEmployees({
     company_id: companyId,
     is_vendedor: apenasVendedores ? true : undefined,
-    ativo: apenasAtivos,
+    ativo: apenasAtivos !== undefined ? apenasAtivos : undefined,
   });
 
   // Reset selection when filters change
