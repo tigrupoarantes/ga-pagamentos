@@ -8,16 +8,21 @@ export interface Company {
 
 export interface ExternalEmployee {
   id: string;
-  company_id: string;
-  nome: string;
-  cpf: string;
-  email: string | null;
-  cargo: string | null;
-  is_vendedor: boolean;
-  codigo_vendedor: string | null;
+  company_id?: string;
+  nome?: string;
+  name?: string;
+  cpf?: string;
+  email?: string | null;
+  cargo?: string | null;
+  position?: string | null;
+  is_vendedor?: boolean;
+  codigo_vendedor?: string | null;
   ativo?: boolean;
-  synced_at: string | null;
+  active?: boolean;
+  synced_at?: string | null;
+  created_at?: string;
   company?: Company;
+  [key: string]: unknown;
 }
 
 export interface EmployeeFilters {
