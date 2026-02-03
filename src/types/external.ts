@@ -15,7 +15,7 @@ export interface ExternalEmployee {
   cargo: string | null;
   is_vendedor: boolean;
   codigo_vendedor: string | null;
-  ativo: boolean;
+  ativo?: boolean;
   synced_at: string | null;
   company?: Company;
 }

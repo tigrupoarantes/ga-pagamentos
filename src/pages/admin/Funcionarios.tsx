@@ -34,13 +34,10 @@ export default function Funcionarios() {
   const [search, setSearch] = useState('');
   const [companyId, setCompanyId] = useState<string>('');
   const [apenasVendedores, setApenasVendedores] = useState(false);
-  const [apenasAtivos, setApenasAtivos] = useState(true);
-
   const { data: companies } = useCompanies();
   const { data: employees, isLoading, error } = useExternalEmployees({
     company_id: companyId || undefined,
     is_vendedor: apenasVendedores ? true : undefined,
-    ativo: apenasAtivos,
     search,
   });
 
@@ -129,16 +126,6 @@ export default function Funcionarios() {
                     Apenas Vendedores
                   </Label>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="ativos"
-                    checked={apenasAtivos}
-                    onCheckedChange={(checked) => setApenasAtivos(!!checked)}
-                  />
-                  <Label htmlFor="ativos" className="text-sm cursor-pointer">
-                    Apenas Ativos
-                  </Label>
-                </div>
               </div>
             </div>
 
@@ -192,9 +179,13 @@ export default function Funcionarios() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={employee.ativo ? 'available' : 'inactive'}>
-                            {employee.ativo ? 'Ativo' : 'Inativo'}
-                          </Badge>
+                          {employee.ativo !== undefined ? (
+                            <Badge variant={employee.ativo ? 'available' : 'inactive'}>
+                              {employee.ativo ? 'Ativo' : 'Inativo'}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
