@@ -13,8 +13,7 @@ export function useExternalEmployees(filters: EmployeeFilters = {}) {
         .select(`
           *,
           company:companies(*)
-        `)
-        .order('nome');
+        `);
 
       if (company_id) {
         query = query.eq('company_id', company_id);
@@ -28,10 +27,7 @@ export function useExternalEmployees(filters: EmployeeFilters = {}) {
         query = query.eq('ativo', ativo);
       }
 
-      if (search && search.trim()) {
-        const searchTerm = `%${search.trim()}%`;
-        query = query.or(`nome.ilike.${searchTerm},cpf.ilike.${searchTerm},codigo_vendedor.ilike.${searchTerm}`);
-      }
+      // Search temporarily disabled until column names are confirmed
 
       const { data, error } = await query;
 

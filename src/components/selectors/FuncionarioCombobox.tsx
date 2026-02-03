@@ -64,12 +64,15 @@ export function FuncionarioCombobox({
     if (!search.trim()) return employees;
 
     const searchLower = search.toLowerCase();
-    return employees.filter(
-      (e) =>
-        e.nome.toLowerCase().includes(searchLower) ||
-        e.cpf.includes(search.replace(/\D/g, '')) ||
+    return employees.filter((e) => {
+      const nome = e.nome || e.name || '';
+      const cpf = e.cpf || '';
+      return (
+        nome.toLowerCase().includes(searchLower) ||
+        cpf.includes(search.replace(/\D/g, '')) ||
         (e.codigo_vendedor && e.codigo_vendedor.toLowerCase().includes(searchLower))
-    );
+      );
+    });
   }, [employees, search]);
 
   const selectedEmployee = useMemo(() => {
@@ -93,7 +96,7 @@ export function FuncionarioCombobox({
             </span>
           ) : selectedEmployee ? (
             <span className="flex items-center gap-2 truncate">
-              {selectedEmployee.nome}
+              {selectedEmployee.nome || selectedEmployee.name || 'Sem nome'}
               {selectedEmployee.is_vendedor && (
                 <UserCheck className="h-3 w-3 text-primary" />
               )}
@@ -132,13 +135,13 @@ export function FuncionarioCombobox({
                   />
                   <div className="flex flex-col flex-1 min-w-0">
                     <span className="flex items-center gap-2">
-                      <span className="truncate">{employee.nome}</span>
+                      <span className="truncate">{employee.nome || employee.name || 'Sem nome'}</span>
                       {employee.is_vendedor && (
                         <UserCheck className="h-3 w-3 text-primary shrink-0" />
                       )}
                     </span>
                     <span className="text-xs text-muted-foreground font-mono">
-                      {formatCPF(employee.cpf)}
+                      {employee.cpf ? formatCPF(employee.cpf) : '-'}
                       {employee.codigo_vendedor && ` • ${employee.codigo_vendedor}`}
                     </span>
                   </div>

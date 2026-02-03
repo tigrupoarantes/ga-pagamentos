@@ -159,11 +159,13 @@ export default function Funcionarios() {
                         style={{ animationDelay: `${index * 30}ms` }}
                       >
                         <TableCell className="font-mono text-sm">
-                          {formatCPF(employee.cpf)}
+                          {employee.cpf ? formatCPF(employee.cpf) : '-'}
                         </TableCell>
-                        <TableCell className="font-medium">{employee.nome}</TableCell>
+                        <TableCell className="font-medium">
+                          {employee.nome || employee.name || 'Sem nome'}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {employee.cargo || '-'}
+                          {employee.cargo || employee.position || '-'}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {employee.company?.name || '-'}
