@@ -1,278 +1,304 @@
 
 
-## Plano: Aplicar Identidade Visual GA360 Design System
+## Plano: Visualizacao de Dados Sincronizados (Empresas e Funcionarios)
 
-### Resumo Executivo
+### Resumo
 
-Transformar o design atual do GA Pagamentos para seguir o GA360 Design System, uma estetica minimalista inspirada na Apple com:
-- Nova paleta de cores baseada em **Violeta** (#8B5CF6) como cor primaria
-- Tipografia SF Pro / System fonts
-- Border radius maior (12px base)
-- Efeitos de glassmorphism
-- Sombras sutis estilo Apple
-- Animacoes suaves e transicoes refinadas
-- Sidebar com tema escuro
+Criar interfaces para visualizar empresas e funcionarios sincronizados do sistema Gestao de Ativos. Inclui duas paginas de listagem (somente leitura) e um componente reutilizavel de selecao de funcionarios (combobox).
 
 ---
 
-### 1. Comparativo de Mudancas
+### 1. Estrutura das Tabelas (Referencia)
 
-| Elemento | Atual | GA360 |
-|----------|-------|-------|
-| Cor Primaria | Azul (217 91% 60%) | Violeta (257 85% 60%) |
-| Border Radius | 0.5rem (8px) | 0.75rem (12px) |
-| Fonte | Inter | SF Pro / System |
-| Sidebar Background | Cinza claro | Tema escuro (252 28% 14%) |
-| Sombras | shadow-sm padrao | Apple-style shadows |
-| Animacoes | Apenas accordion | Fade, scale, slide, float |
+**companies**
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | uuid | Identificador unico |
+| name | text | Nome da empresa |
+| cnpj | text | CNPJ formatado |
+| created_at | timestamp | Data de criacao |
+| synced_at | timestamp | Ultima sincronizacao |
+
+**external_employees**
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | uuid | Identificador unico |
+| company_id | uuid | Referencia a empresa |
+| nome | text | Nome do funcionario |
+| cpf | text | CPF (unico) |
+| email | text | Email |
+| cargo | text | Cargo |
+| is_vendedor | boolean | Se e vendedor |
+| codigo_vendedor | text | Codigo do vendedor |
+| ativo | boolean | Status ativo |
+| synced_at | timestamp | Ultima sincronizacao |
 
 ---
 
-### 2. Arquivos a Modificar
+### 2. Arquivos a Criar
 
-| Arquivo | Alteracoes |
+| Arquivo | Tipo | Descricao |
+|---------|------|-----------|
+| `src/types/external.ts` | Tipos | Interfaces para companies e external_employees |
+| `src/hooks/useCompanies.ts` | Hook | Buscar empresas sincronizadas |
+| `src/hooks/useExternalEmployees.ts` | Hook | Buscar funcionarios com filtros |
+| `src/components/selectors/FuncionarioCombobox.tsx` | Componente | Combobox reutilizavel de funcionarios |
+| `src/pages/admin/Empresas.tsx` | Pagina | Listagem de empresas |
+| `src/pages/admin/Funcionarios.tsx` | Pagina | Listagem de funcionarios |
+
+---
+
+### 3. Arquivos a Modificar
+
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/index.css` | Variaveis CSS (cores, glassmorphism, transicoes) |
-| `tailwind.config.ts` | Keyframes, sombras, espacamentos, border-radius |
-| `src/components/ui/button.tsx` | Adicionar transicoes suaves |
-| `src/components/ui/card.tsx` | Sombras Apple, hover effects |
-| `src/components/ui/input.tsx` | Estados valido/invalido |
-| `src/components/ui/badge.tsx` | Cores de status semanticas |
-| `src/pages/Auth.tsx` | Glass card no login |
-| `src/components/layout/AppSidebar.tsx` | Tema escuro |
-| `src/pages/Dashboard.tsx` | Cards com hover effects |
+| `src/App.tsx` | Adicionar rotas /admin/empresas e /admin/funcionarios |
+| `src/components/layout/AppSidebar.tsx` | Adicionar itens de menu na secao Admin |
 
 ---
 
-### 3. Detalhes Tecnicos
+### 4. Detalhes Tecnicos
 
-#### 3.1 Novas Variaveis CSS (index.css)
+#### 4.1 Tipos (src/types/external.ts)
 
-**Cores Light Mode:**
 ```text
---primary: 257 85% 60%        (Violeta #8B5CF6)
---accent: 256 91% 67%         (Violeta Suave #A78BFA)
---background: 0 0% 100%
---foreground: 240 10% 3.9%
---success: 142 76% 36%
---info: 199 89% 48%
---status-available: 142 76% 36%
---status-allocated: 257 85% 60%
---status-maintenance: 38 92% 50%
---status-inactive: 240 3.8% 50%
+Company
+- id: string
+- name: string
+- cnpj: string | null
+- created_at: string
+- synced_at: string | null
+
+ExternalEmployee
+- id: string
+- company_id: string
+- nome: string
+- cpf: string
+- email: string | null
+- cargo: string | null
+- is_vendedor: boolean
+- codigo_vendedor: string | null
+- ativo: boolean
+- synced_at: string | null
+- company?: Company (join)
 ```
 
-**Cores Dark Mode:**
-```text
---primary: 257 85% 65%
---accent: 256 91% 70%
---background: 240 10% 3.9%
---foreground: 0 0% 100%
-```
+#### 4.2 Hook useCompanies
 
-**Sidebar (Tema Escuro):**
-```text
---sidebar-background: 252 28% 14%
---sidebar-foreground: 0 0% 100%
---sidebar-primary: 257 85% 60%
---sidebar-border: 252 28% 20%
-```
+Funcoes:
+- `fetchCompanies()` - Lista todas empresas
+- `getCompanyById(id)` - Busca empresa especifica
 
-**Glassmorphism:**
-```text
---glass-bg: rgba(255, 255, 255, 0.8)       (light)
---glass-bg: rgba(15, 15, 20, 0.85)         (dark)
---glass-border: rgba(255, 255, 255, 0.5)   (light)
---glass-border: rgba(255, 255, 255, 0.08)  (dark)
-```
+Ordenacao padrao: por nome
 
-**Transicoes:**
-```text
---transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1)
---transition-smooth: 320ms cubic-bezier(0.4, 0, 0.2, 1)
---transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1)
-```
+#### 4.3 Hook useExternalEmployees
 
-**Espacamentos Apple:**
-```text
---apple-sm: 0.75rem   (12px)
---apple-md: 1.5rem    (24px)
---apple-lg: 2.5rem    (40px)
---apple-xl: 4rem      (64px)
-```
+Funcoes:
+- `fetchEmployees(filters)` - Lista funcionarios com filtros
+
+Filtros disponiveis:
+- `company_id`: string (filtrar por empresa)
+- `is_vendedor`: boolean (somente vendedores)
+- `ativo`: boolean (somente ativos)
+- `search`: string (buscar por nome, cpf ou codigo)
+
+Ordenacao padrao: por nome
 
 ---
 
-#### 3.2 Tailwind Config (tailwind.config.ts)
+### 5. Pagina de Empresas
 
-**Border Radius:**
+**Rota:** `/admin/empresas`
+
+**Layout:**
 ```text
---radius: 0.75rem (12px base)
-rounded-apple: 16px
-rounded-apple-lg: 24px
++------------------------------------------+
+| Empresas Sincronizadas              [i]  |
+| Dados sincronizados do Gestao de Ativos  |
++------------------------------------------+
+| [Campo de busca por nome/CNPJ]           |
++------------------------------------------+
+| CNPJ          | Nome         | Ultima    |
+|               |              | Sync      |
++------------------------------------------+
+| 01.234.567... | Empresa A    | 01/02/25  |
+| 98.765.432... | Empresa B    | 01/02/25  |
++------------------------------------------+
 ```
 
-**Sombras Apple-style:**
-```text
-shadow-apple: 0 2px 8px rgba(0,0,0,0.04), 0 4px 24px rgba(0,0,0,0.06)
-shadow-apple-hover: 0 4px 16px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.08)
-shadow-apple-lg: 0 8px 32px rgba(0,0,0,0.08), 0 16px 64px rgba(0,0,0,0.06)
-shadow-glass: 0 25px 50px -12px rgba(0, 0, 0, 0.1)
-shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)
-```
-
-**Novas Animacoes:**
-```text
-fadeIn: opacity 0 -> 1
-fadeInUp: opacity + translateY(16px) -> 0
-scaleIn: scale(0.95) -> 1
-slideInRight: translateX(16px) -> 0
-float: translateY(0) -> -10px -> 0 (infinito)
-shake: translateX +/- 4px (erro)
-```
-
-**Classes Utilitarias:**
-```text
-.glass          - Glassmorphism basico
-.glass-card     - Card com glassmorphism
-.hover-scale    - Scale 1.05 no hover
-.hover-lift     - Eleva + sombra
-.card-hover     - Efeito completo para cards
-.animate-fade-in
-.animate-fade-in-up
-.animate-scale-in
-.animate-slide-in-right
-.animate-stagger-1/2/3 (delays escalonados)
-```
+**Caracteristicas:**
+- Somente leitura (dados vem do sistema externo)
+- Busca por nome ou CNPJ
+- Badge indicando status "Sincronizado"
+- Exibicao da data da ultima sincronizacao
+- Formatacao de CNPJ para exibicao
 
 ---
 
-#### 3.3 Tipografia
+### 6. Pagina de Funcionarios
 
-Trocar fonte de Inter para SF Pro Display / System fonts:
+**Rota:** `/admin/funcionarios`
+
+**Layout:**
 ```text
-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", 
-             "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
++--------------------------------------------------+
+| Funcionarios Sincronizados                  [i]  |
+| Dados sincronizados do Gestao de Ativos          |
++--------------------------------------------------+
+| [Busca]  [Empresa v]  [x] Vendedores  [x] Ativos |
++--------------------------------------------------+
+| CPF       | Nome    | Cargo  | Empresa | Vendedor|
++--------------------------------------------------+
+| 123.456...| Joao    | Vend.  | Emp A   | V-001   |
+| 987.654...| Maria   | Ger.   | Emp B   | -       |
++--------------------------------------------------+
 ```
 
----
-
-#### 3.4 Componentes UI
-
-**Card (card.tsx):**
-- Adicionar `shadow-card` ou `shadow-apple` como padrao
-- Adicionar classes de hover opcionais
-
-**Button (button.tsx):**
-- Melhorar transicoes com `transition-all duration-200`
-- Adicionar efeito de hover mais suave
-
-**Input (input.tsx):**
-- Adicionar classes `.input-valid` (borda verde)
-- Adicionar classes `.input-invalid` (borda vermelha)
-- Foco com cor primaria violeta
-
-**Badge (badge.tsx):**
-- Adicionar variantes de status (success, warning, info)
-- Cores semanticas conforme documentacao
+**Caracteristicas:**
+- Somente leitura (dados vem do sistema externo)
+- Filtro por empresa (Select)
+- Filtro de vendedores (Checkbox)
+- Filtro de ativos (Checkbox, default: true)
+- Busca por nome, CPF ou codigo vendedor
+- Badge "Vendedor" quando is_vendedor = true
+- Badge de status (Ativo/Inativo)
+- Exibicao do codigo do vendedor quando aplicavel
+- Formatacao de CPF para exibicao
 
 ---
 
-#### 3.5 Pagina de Auth
+### 7. Componente FuncionarioCombobox
 
-Aplicar glassmorphism no card de login:
+**Uso:**
 ```text
-- Fundo com gradiente sutil
-- Card com classe .glass-card
-- Blur de 20px
-- Sombra glass
-- Border radius 24px
+<FuncionarioCombobox
+  value={selectedId}
+  onChange={setSelectedId}
+  companyId="uuid-opcional"       // Filtrar por empresa
+  apenasVendedores={true}         // Filtrar vendedores
+  apenasAtivos={true}             // Filtrar ativos (default)
+  placeholder="Selecione..."
+/>
+```
+
+**Caracteristicas:**
+- Baseado no componente Command (cmdk) + Popover
+- Busca em tempo real (debounce 300ms)
+- Exibe nome + CPF (formatado)
+- Indicador de vendedor quando aplicavel
+- Suporte a filtragem por empresa
+- Limpa selecao quando filtros mudam
+
+**Layout visual:**
+```text
++----------------------------------+
+| [Buscar funcionario...]       v  |
++----------------------------------+
+  | Joao Silva - 123.456.789-00   |
+  | Maria Santos - 987.654.321-00 |
+  | Pedro Vendedor (V-001)        |
+  +--------------------------------+
 ```
 
 ---
 
-#### 3.6 Sidebar
+### 8. Navegacao (Sidebar)
 
-Aplicar tema escuro conforme GA360:
+Adicionar na secao "Administracao":
+
 ```text
-- Background: 252 28% 14% (roxo escuro)
-- Texto: branco
-- Items ativos: violeta primario
-- Bordas: 252 28% 20%
+Administracao
+- Centros de Custo
+- Fornecedores
+- Empresas          <- Novo
+- Funcionarios      <- Novo
+- Orcamento Anual
+- Workflow
+- Usuarios
+```
+
+Icones sugeridos:
+- Empresas: `Building` (lucide)
+- Funcionarios: `Users` ou `UserCheck` (lucide)
+
+---
+
+### 9. Rotas (App.tsx)
+
+Adicionar:
+```text
+/admin/empresas     -> Empresas.tsx
+/admin/funcionarios -> Funcionarios.tsx
 ```
 
 ---
 
-#### 3.7 Dashboard
+### 10. Tratamento de Dados
 
-Cards com efeitos hover:
+**Formatacao CPF:**
 ```text
-- Sombra apple por padrao
-- Hover lift effect
-- Animacao de entrada staggered
+12345678900 -> 123.456.789-00
+```
+
+**Formatacao CNPJ:**
+```text
+12345678000199 -> 12.345.678/0001-99
+```
+
+**Data de sincronizacao:**
+```text
+2025-02-03T10:30:00 -> 03/02/2025 10:30
 ```
 
 ---
 
-### 4. Scrollbar Customizada
+### 11. Estados Visuais
 
-Adicionar estilo fino e discreto:
-```text
-width: 6px
-thumb: muted-foreground com 20% opacidade
-hover: 40% opacidade
-border-radius: 3px
-```
+**Tabela vazia:**
+- "Nenhuma empresa sincronizada"
+- "Nenhum funcionario encontrado"
 
----
+**Loading:**
+- Spinner centralizado (Loader2 do lucide)
 
-### 5. Focus States
-
-Padronizar focus ring com cor primaria violeta:
-```text
-focus-visible: ring-2 ring-primary ring-offset-2
-```
+**Sem filtros aplicados:**
+- Exibir todos os registros ativos
 
 ---
 
-### 6. Ordem de Implementacao
+### 12. Consideracoes de RLS
 
-1. **index.css** - Variaveis base (cores, glassmorphism, transicoes)
-2. **tailwind.config.ts** - Sombras, animacoes, border-radius
-3. **Componentes UI** - button, card, input, badge
-4. **Auth.tsx** - Glass card no login
-5. **AppSidebar** - Tema escuro
-6. **Dashboard** - Cards com hover effects
-7. **Testes visuais** - Verificar consistencia
+As tabelas `companies` e `external_employees` devem ter politicas de leitura para usuarios autenticados:
+
+```text
+SELECT para usuarios autenticados em:
+- companies
+- external_employees
+```
+
+Caso as politicas nao existam, as queries retornarao vazio e uma mensagem adequada sera exibida.
 
 ---
 
-### 7. Impacto Visual
+### 13. Ordem de Implementacao
 
-Antes (Azul, sombras padrao, Inter):
-```text
-+------------------+
-|  GA Pagamentos   |  <- Sidebar cinza claro
-+------------------+
-|   Card azul      |  <- Botoes azuis
-|   sombra basica  |  <- Sombras padrao
-+------------------+
-```
-
-Depois (Violeta, glassmorphism, SF Pro):
-```text
-+------------------+
-|  GA Pagamentos   |  <- Sidebar roxo escuro
-+------------------+
-|   Card violeta   |  <- Botoes violeta
-|   sombra apple   |  <- Efeitos glass
-|   hover lift     |  <- Animacoes suaves
-+------------------+
-```
+1. Criar tipos em `src/types/external.ts`
+2. Criar hook `useCompanies.ts`
+3. Criar hook `useExternalEmployees.ts`
+4. Criar pagina `Empresas.tsx`
+5. Criar pagina `Funcionarios.tsx`
+6. Criar componente `FuncionarioCombobox.tsx`
+7. Atualizar rotas em `App.tsx`
+8. Atualizar menu em `AppSidebar.tsx`
 
 ---
 
-### 8. Pre-requisitos
+### 14. Estilo Visual
 
-Nenhuma dependencia adicional necessaria. Todas as mudancas sao em CSS/Tailwind e componentes existentes.
+Seguir o GA360 Design System ja implementado:
+- Cards com `shadow-apple` e `card-hover`
+- Animacoes `animate-fade-in-up`
+- Badges com cores semanticas
+- Inputs com focus ring violeta
+- Tabelas com hover na linha
 
