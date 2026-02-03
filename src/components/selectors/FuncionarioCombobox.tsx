@@ -65,7 +65,7 @@ export function FuncionarioCombobox({
 
     const searchLower = search.toLowerCase();
     return employees.filter((e) => {
-      const nome = e.nome || e.name || '';
+      const nome = e.full_name || '';
       const cpf = e.cpf || '';
       return (
         nome.toLowerCase().includes(searchLower) ||
@@ -96,7 +96,7 @@ export function FuncionarioCombobox({
             </span>
           ) : selectedEmployee ? (
             <span className="flex items-center gap-2 truncate">
-              {selectedEmployee.nome || selectedEmployee.name || 'Sem nome'}
+              {selectedEmployee.full_name || 'Sem nome'}
               {selectedEmployee.is_vendedor && (
                 <UserCheck className="h-3 w-3 text-primary" />
               )}
@@ -135,7 +135,7 @@ export function FuncionarioCombobox({
                   />
                   <div className="flex flex-col flex-1 min-w-0">
                     <span className="flex items-center gap-2">
-                      <span className="truncate">{employee.nome || employee.name || 'Sem nome'}</span>
+                      <span className="truncate">{employee.full_name || 'Sem nome'}</span>
                       {employee.is_vendedor && (
                         <UserCheck className="h-3 w-3 text-primary shrink-0" />
                       )}

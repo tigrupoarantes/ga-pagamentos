@@ -162,10 +162,10 @@ export default function Funcionarios() {
                           {employee.cpf ? formatCPF(employee.cpf) : '-'}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {employee.nome || employee.name || 'Sem nome'}
+                          {employee.full_name || 'Sem nome'}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {employee.cargo || employee.position || '-'}
+                          {employee.position || '-'}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {employee.company?.name || '-'}
@@ -181,13 +181,9 @@ export default function Funcionarios() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {employee.ativo !== undefined ? (
-                            <Badge variant={employee.ativo ? 'available' : 'inactive'}>
-                              {employee.ativo ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
+                          <Badge variant={employee.is_active ? 'available' : 'inactive'}>
+                            {employee.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
