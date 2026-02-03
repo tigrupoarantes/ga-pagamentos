@@ -103,12 +103,12 @@ export default function Funcionarios() {
               </div>
 
               {/* Company Filter */}
-              <Select value={companyId} onValueChange={setCompanyId}>
+              <Select value={companyId || '__all__'} onValueChange={(val) => setCompanyId(val === '__all__' ? '' : val)}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Todas as empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as empresas</SelectItem>
+                  <SelectItem value="__all__">Todas as empresas</SelectItem>
                   {companies?.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
