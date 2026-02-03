@@ -1,304 +1,110 @@
 
 
-## Plano: Visualizacao de Dados Sincronizados (Empresas e Funcionarios)
+## Plano: Corrigir Filtro de Coluna Inexistente (external_employees.ativo)
 
-### Resumo
+### Problema Identificado
 
-Criar interfaces para visualizar empresas e funcionarios sincronizados do sistema Gestao de Ativos. Inclui duas paginas de listagem (somente leitura) e um componente reutilizavel de selecao de funcionarios (combobox).
+O erro **HTTP 400** retornado pelo Supabase:
+```
+"column external_employees.ativo does not exist"
+```
 
----
-
-### 1. Estrutura das Tabelas (Referencia)
-
-**companies**
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| id | uuid | Identificador unico |
-| name | text | Nome da empresa |
-| cnpj | text | CNPJ formatado |
-| created_at | timestamp | Data de criacao |
-| synced_at | timestamp | Ultima sincronizacao |
-
-**external_employees**
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| id | uuid | Identificador unico |
-| company_id | uuid | Referencia a empresa |
-| nome | text | Nome do funcionario |
-| cpf | text | CPF (unico) |
-| email | text | Email |
-| cargo | text | Cargo |
-| is_vendedor | boolean | Se e vendedor |
-| codigo_vendedor | text | Codigo do vendedor |
-| ativo | boolean | Status ativo |
-| synced_at | timestamp | Ultima sincronizacao |
+O hook `useExternalEmployees.ts` tenta filtrar pela coluna `ativo` que nao existe na tabela real do banco de dados.
 
 ---
 
-### 2. Arquivos a Criar
+### Causa Raiz
 
-| Arquivo | Tipo | Descricao |
-|---------|------|-----------|
-| `src/types/external.ts` | Tipos | Interfaces para companies e external_employees |
-| `src/hooks/useCompanies.ts` | Hook | Buscar empresas sincronizadas |
-| `src/hooks/useExternalEmployees.ts` | Hook | Buscar funcionarios com filtros |
-| `src/components/selectors/FuncionarioCombobox.tsx` | Componente | Combobox reutilizavel de funcionarios |
-| `src/pages/admin/Empresas.tsx` | Pagina | Listagem de empresas |
-| `src/pages/admin/Funcionarios.tsx` | Pagina | Listagem de funcionarios |
+O codigo foi criado com base em um esquema planejado, mas a tabela real `external_employees` no Supabase tem uma estrutura diferente. O filtro padrao `ativo = true` (linha 6 e 27-29 do hook) esta causando o erro.
 
 ---
 
-### 3. Arquivos a Modificar
+### Solucao
+
+Tornar o filtro `ativo` opcional e remover o valor padrao, permitindo que a query funcione mesmo sem essa coluna.
+
+---
+
+### Arquivos a Modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/App.tsx` | Adicionar rotas /admin/empresas e /admin/funcionarios |
-| `src/components/layout/AppSidebar.tsx` | Adicionar itens de menu na secao Admin |
+| `src/hooks/useExternalEmployees.ts` | Remover filtro `ativo` padrao |
+| `src/types/external.ts` | Tornar campo `ativo` opcional |
+| `src/pages/admin/Funcionarios.tsx` | Ajustar/remover checkbox de "Apenas Ativos" |
+| `src/components/selectors/FuncionarioCombobox.tsx` | Remover prop `apenasAtivos` padrao |
 
 ---
 
-### 4. Detalhes Tecnicos
+### Detalhes Tecnicos
 
-#### 4.1 Tipos (src/types/external.ts)
+#### 1. useExternalEmployees.ts
 
-```text
-Company
-- id: string
-- name: string
-- cnpj: string | null
-- created_at: string
-- synced_at: string | null
-
-ExternalEmployee
-- id: string
-- company_id: string
-- nome: string
-- cpf: string
-- email: string | null
-- cargo: string | null
-- is_vendedor: boolean
-- codigo_vendedor: string | null
-- ativo: boolean
-- synced_at: string | null
-- company?: Company (join)
+**Antes:**
+```typescript
+const { company_id, is_vendedor, ativo = true, search } = filters;
+// ...
+if (typeof ativo === 'boolean') {
+  query = query.eq('ativo', ativo);
+}
 ```
 
-#### 4.2 Hook useCompanies
-
-Funcoes:
-- `fetchCompanies()` - Lista todas empresas
-- `getCompanyById(id)` - Busca empresa especifica
-
-Ordenacao padrao: por nome
-
-#### 4.3 Hook useExternalEmployees
-
-Funcoes:
-- `fetchEmployees(filters)` - Lista funcionarios com filtros
-
-Filtros disponiveis:
-- `company_id`: string (filtrar por empresa)
-- `is_vendedor`: boolean (somente vendedores)
-- `ativo`: boolean (somente ativos)
-- `search`: string (buscar por nome, cpf ou codigo)
-
-Ordenacao padrao: por nome
-
----
-
-### 5. Pagina de Empresas
-
-**Rota:** `/admin/empresas`
-
-**Layout:**
-```text
-+------------------------------------------+
-| Empresas Sincronizadas              [i]  |
-| Dados sincronizados do Gestao de Ativos  |
-+------------------------------------------+
-| [Campo de busca por nome/CNPJ]           |
-+------------------------------------------+
-| CNPJ          | Nome         | Ultima    |
-|               |              | Sync      |
-+------------------------------------------+
-| 01.234.567... | Empresa A    | 01/02/25  |
-| 98.765.432... | Empresa B    | 01/02/25  |
-+------------------------------------------+
+**Depois:**
+```typescript
+const { company_id, is_vendedor, ativo, search } = filters;
+// ...
+// Apenas aplica filtro se a coluna existir E valor for passado
+if (typeof ativo === 'boolean') {
+  query = query.eq('ativo', ativo);
+}
 ```
 
-**Caracteristicas:**
-- Somente leitura (dados vem do sistema externo)
-- Busca por nome ou CNPJ
-- Badge indicando status "Sincronizado"
-- Exibicao da data da ultima sincronizacao
-- Formatacao de CNPJ para exibicao
+Remover o valor padrao `= true` da linha 6.
 
----
+#### 2. types/external.ts
 
-### 6. Pagina de Funcionarios
-
-**Rota:** `/admin/funcionarios`
-
-**Layout:**
-```text
-+--------------------------------------------------+
-| Funcionarios Sincronizados                  [i]  |
-| Dados sincronizados do Gestao de Ativos          |
-+--------------------------------------------------+
-| [Busca]  [Empresa v]  [x] Vendedores  [x] Ativos |
-+--------------------------------------------------+
-| CPF       | Nome    | Cargo  | Empresa | Vendedor|
-+--------------------------------------------------+
-| 123.456...| Joao    | Vend.  | Emp A   | V-001   |
-| 987.654...| Maria   | Ger.   | Emp B   | -       |
-+--------------------------------------------------+
+Tornar o campo `ativo` opcional no tipo:
+```typescript
+ativo?: boolean;  // Era: ativo: boolean
 ```
 
-**Caracteristicas:**
-- Somente leitura (dados vem do sistema externo)
-- Filtro por empresa (Select)
-- Filtro de vendedores (Checkbox)
-- Filtro de ativos (Checkbox, default: true)
-- Busca por nome, CPF ou codigo vendedor
-- Badge "Vendedor" quando is_vendedor = true
-- Badge de status (Ativo/Inativo)
-- Exibicao do codigo do vendedor quando aplicavel
-- Formatacao de CPF para exibicao
+#### 3. Funcionarios.tsx
 
----
-
-### 7. Componente FuncionarioCombobox
-
-**Uso:**
-```text
-<FuncionarioCombobox
-  value={selectedId}
-  onChange={setSelectedId}
-  companyId="uuid-opcional"       // Filtrar por empresa
-  apenasVendedores={true}         // Filtrar vendedores
-  apenasAtivos={true}             // Filtrar ativos (default)
-  placeholder="Selecione..."
-/>
+Remover ou ocultar o checkbox "Apenas Ativos" ja que a coluna nao existe:
+```typescript
+// Remover estado e UI relacionados a apenasAtivos
+// const [apenasAtivos, setApenasAtivos] = useState(true);
 ```
 
-**Caracteristicas:**
-- Baseado no componente Command (cmdk) + Popover
-- Busca em tempo real (debounce 300ms)
-- Exibe nome + CPF (formatado)
-- Indicador de vendedor quando aplicavel
-- Suporte a filtragem por empresa
-- Limpa selecao quando filtros mudam
+Ou manter escondido para uso futuro quando a coluna for adicionada.
 
-**Layout visual:**
-```text
-+----------------------------------+
-| [Buscar funcionario...]       v  |
-+----------------------------------+
-  | Joao Silva - 123.456.789-00   |
-  | Maria Santos - 987.654.321-00 |
-  | Pedro Vendedor (V-001)        |
-  +--------------------------------+
+#### 4. FuncionarioCombobox.tsx
+
+Remover prop padrao:
+```typescript
+// Era: apenasAtivos = true
+// Agora: apenasAtivos (sem default)
 ```
 
 ---
 
-### 8. Navegacao (Sidebar)
+### Alternativa (Para o Usuario)
 
-Adicionar na secao "Administracao":
+Se a coluna `ativo` for necessaria no futuro, voce pode adiciona-la no Supabase:
 
-```text
-Administracao
-- Centros de Custo
-- Fornecedores
-- Empresas          <- Novo
-- Funcionarios      <- Novo
-- Orcamento Anual
-- Workflow
-- Usuarios
+```sql
+ALTER TABLE external_employees 
+ADD COLUMN ativo boolean DEFAULT true;
 ```
 
-Icones sugeridos:
-- Empresas: `Building` (lucide)
-- Funcionarios: `Users` ou `UserCheck` (lucide)
+Apos adicionar a coluna, o codigo atual funcionara sem modificacoes.
 
 ---
 
-### 9. Rotas (App.tsx)
+### Ordem de Implementacao
 
-Adicionar:
-```text
-/admin/empresas     -> Empresas.tsx
-/admin/funcionarios -> Funcionarios.tsx
-```
-
----
-
-### 10. Tratamento de Dados
-
-**Formatacao CPF:**
-```text
-12345678900 -> 123.456.789-00
-```
-
-**Formatacao CNPJ:**
-```text
-12345678000199 -> 12.345.678/0001-99
-```
-
-**Data de sincronizacao:**
-```text
-2025-02-03T10:30:00 -> 03/02/2025 10:30
-```
-
----
-
-### 11. Estados Visuais
-
-**Tabela vazia:**
-- "Nenhuma empresa sincronizada"
-- "Nenhum funcionario encontrado"
-
-**Loading:**
-- Spinner centralizado (Loader2 do lucide)
-
-**Sem filtros aplicados:**
-- Exibir todos os registros ativos
-
----
-
-### 12. Consideracoes de RLS
-
-As tabelas `companies` e `external_employees` devem ter politicas de leitura para usuarios autenticados:
-
-```text
-SELECT para usuarios autenticados em:
-- companies
-- external_employees
-```
-
-Caso as politicas nao existam, as queries retornarao vazio e uma mensagem adequada sera exibida.
-
----
-
-### 13. Ordem de Implementacao
-
-1. Criar tipos em `src/types/external.ts`
-2. Criar hook `useCompanies.ts`
-3. Criar hook `useExternalEmployees.ts`
-4. Criar pagina `Empresas.tsx`
-5. Criar pagina `Funcionarios.tsx`
-6. Criar componente `FuncionarioCombobox.tsx`
-7. Atualizar rotas em `App.tsx`
-8. Atualizar menu em `AppSidebar.tsx`
-
----
-
-### 14. Estilo Visual
-
-Seguir o GA360 Design System ja implementado:
-- Cards com `shadow-apple` e `card-hover`
-- Animacoes `animate-fade-in-up`
-- Badges com cores semanticas
-- Inputs com focus ring violeta
-- Tabelas com hover na linha
+1. Atualizar `src/types/external.ts` - campo opcional
+2. Atualizar `src/hooks/useExternalEmployees.ts` - remover default
+3. Atualizar `src/pages/admin/Funcionarios.tsx` - ajustar UI
+4. Atualizar `src/components/selectors/FuncionarioCombobox.tsx` - ajustar props
 
