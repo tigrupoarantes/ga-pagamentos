@@ -63,6 +63,16 @@ const adminItems = [
     icon: Users,
   },
   {
+    title: 'Empresas',
+    url: '/admin/empresas',
+    icon: Building2,
+  },
+  {
+    title: 'Funcionários',
+    url: '/admin/funcionarios',
+    icon: Users,
+  },
+  {
     title: 'Orçamento Anual',
     url: '/admin/orcamento',
     icon: DollarSign,

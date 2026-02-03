@@ -10,6 +10,8 @@ import Solicitacoes from "./pages/Solicitacoes";
 import Aprovacoes from "./pages/Aprovacoes";
 import CentrosCusto from "./pages/admin/CentrosCusto";
 import Fornecedores from "./pages/admin/Fornecedores";
+import Empresas from "./pages/admin/Empresas";
+import Funcionarios from "./pages/admin/Funcionarios";
 import OrcamentoAnual from "./pages/admin/OrcamentoAnual";
 import WorkflowConfig from "./pages/admin/WorkflowConfig";
 import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/aprovacoes" element={<Aprovacoes />} />
             <Route path="/admin/centros-custo" element={<CentrosCusto />} />
             <Route path="/admin/fornecedores" element={<Fornecedores />} />
+            <Route path="/admin/empresas" element={<Empresas />} />
+            <Route path="/admin/funcionarios" element={<Funcionarios />} />
             <Route path="/admin/orcamento" element={<OrcamentoAnual />} />
               <Route path="/admin/workflow" element={<WorkflowConfig />} />
               <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
